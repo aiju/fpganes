@@ -18,7 +18,17 @@ module aux(
         dmastart,
         dmaend,
         debug,
-        debug2
+        debug2,
+        trace,
+        debugstall,
+        halt,
+        cputick_,
+		ppux,
+		ppuy,
+		pix,
+	pputick_,
+	input0,
+	input1
     );
 	input wire clk;
 	input wire [31:0] regaddr, regwdata;
@@ -35,6 +45,13 @@ module aux(
 	output reg [31:0] phyctl;
 	output reg [`ATTRMAX:0] attr;
 	output reg [31:0] dmastart, dmaend;
+	input wire [94:0] trace;
+	output wire debugstall;
+	input wire cputick_, halt;
+	input wire [8:0] ppux, ppuy;
+	input wire [23:0] pix;
+	input wire pputick_;
+	output reg [7:0] input0, input1;
     
 	reg[31:0] mem[0:4];
 	reg[4:0] len, slen;
@@ -64,12 +81,16 @@ module aux(
 	parameter RXWAIT = 1;
 	parameter RXDATA = 2;
 	wire sync;
+	reg regreq0, singlestep, pixelstep, step, waittick;
 
 	assign regerr = 0;
 	always @(posedge clk) begin
 		start <= 0;
-		regack <= regreq;
-		if(regreq && !regwr)
+		step <= 0;
+		regack <= 0;
+		regreq0 <= regreq;
+		if(regreq && !regreq0 && !regwr) begin
+			regack <= 1;
 			if(regaddr[6] == 1) begin
 				regrdata <= mem[regaddr[4:2]];
 			end else begin
@@ -80,9 +101,16 @@ module aux(
 					regrdata <= invalid << 16 | rxbytes;
 				4:
 					regrdata <= phyctl;
+				'h80: regrdata <= trace[31:0];
+				'h84: regrdata <= trace[63:32];
+				'h88: regrdata <= {1'd0, trace[94:64]};
+				'h8C: regrdata <= {7'd0, ppuy, 7'd0, ppux};
+				'h90: regrdata <= {8'd0, pix}; 
 				endcase
 			end
-		if(regreq && regwr)
+		end
+		if(regreq && !regreq0 && regwr) begin
+			regack <= 1;
 			if(regaddr[6] == 1) begin
 				if(regwstrb[0])
 					mem[regaddr[4:2]][7:0] <= regwdata[7:0];
@@ -118,8 +146,26 @@ module aux(
 					dmastart <= regwdata;
 				40:
 					dmaend <= regwdata;
+				'h80: begin
+					singlestep <= regwdata[0];
+					step <= regwdata[1];
+					if(regwdata[2]) begin
+						regack <= 0;
+						waittick <= 1;
+					end
+					pixelstep <= regwdata[3];
+				end
+				'h84: begin
+					input0 <= regwdata[7:0];
+					input1 <= regwdata[15:8];
+				end
 				endcase
 			end
+		end
+		if(waittick && debugstall) begin
+			regack <= 1;
+			waittick <= 0;
+		end
 		if(bytedone) begin
 			rxtmp = rxbuf;
 			case(rxbytes & 3)
@@ -132,6 +178,7 @@ module aux(
 		end
 	end
 	assign debug = auxi;
+	assign debugstall = cputick_ && singlestep && !step && !halt || pputick_ && pixelstep && !step;
 	
 	assign auxclk = auxdiv < CLKDIV/2;
 	assign auxtick = auxdiv == CLKDIV-1;

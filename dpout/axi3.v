@@ -55,8 +55,8 @@ module axi3(
 	parameter ADDR = 32;
 	parameter DATA = 32;
 	parameter ID = 12;
-	parameter TIMEBITS = 255;
-	parameter TIMEOUT = 10;
+	parameter TIMEBITS = 20;
+	parameter TIMEOUT = 1048575;
 	
 	input wire clk, resetn;
 	

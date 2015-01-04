@@ -15,7 +15,10 @@ set_property PACKAGE_PIN M2 [get_ports debug]
 set_property IOSTANDARD LVCMOS33 [get_ports debug]
 #set_property PACKAGE_PIN P3 [get_ports debug2]
 #set_property IOSTANDARD LVCMOS33 [get_ports debug2]
-set_false_path -from [get_clocks clk_fpga_0] -to [get_clocks clkout0]
+
+create_clock -name FCLK -period 10.000 [get_pins {PS7_0/FCLKCLK[0]}]
+create_clock -name USRCLK -period 12.500 [get_nets usrclk]
+set_false_path -from [get_clocks FCLK] -to [get_clocks USRCLK]
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 set_property BITSTREAM.CONFIG.UNUSEDPIN PULLUP [current_design]

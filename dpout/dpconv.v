@@ -1,50 +1,34 @@
 `include "dport.vh"
 
 module dpconv(
-	input wire clk0,
+	input wire clk,
 	input wire [8:0] ppux,
 	input wire [8:0] ppuy,
-	input wire pxvalid,
 	input wire [23:0] pix,
-	output wire stall,
-	
-	input wire clk,
+	input wire empty,
+	output reg rden,
 	input wire restart,
 	input wire consume,
-	output reg [31:0] outdat,
+	output wire [31:0] outdat
 );
-
-	wire [63:0] do;
-	wire [8:0] oppux, oppuy;
-	wire [23:0] opix;
-	assign oppux = do[41:33];
-	assign oppuy = do[32:24];
-	assign opix = do[23:0];
-	reg rden;
-	
-	FIFO36E1 #(.FIRST_WORD_FALL_THROUGH(TRUE)) fifo(
-		.FULL(stall),
-		.EMPTY(empty),
-		.WREN(pxvalid),
-		.DI({22'd0, ppux, ppuy, pix}),
-		.DO(do),
-		.RDEN(rden),
-		.WRCLK(clk0),
-		.RDCLK(clk),
-	);
-	
-	reg [8:0] oppux0, oppuy0;
-	reg [23:0] opix0;
+	reg [8:0] ppux0, ppuy0;
+	reg [23:0] pix0;
 
 	reg xyinc, xyzero;
 	reg [9:0] ox, oy;
 	reg [1:0] state, state_;
 	reg [2:0] rem;
+	reg [31:0] outdatr, outdatr_;
+	assign outdat = consume ? outdatr_ : outdatr;
 	localparam SKIP = 0;
+	localparam OUT = 1;
+	
+	initial state = SKIP;
 	
 	always @(posedge clk) begin
 		state <= state_;
 		if(xyinc) begin
+			outdatr <= outdatr_;
 			if(ox != 479)
 				ox <= ox + 1;
 			else if(oy != 479) begin
@@ -62,41 +46,45 @@ module dpconv(
 		if(xyzero) begin
 			ox <= 0;
 			oy <= 0;
-			rem <= 0;
+			rem <= 1;
 		end
-		if(do)
-			opix0 <= opix;
+		if(rden) begin
+			pix0 <= pix;
+			ppux0 <= ppux;
+			ppuy0 <= ppuy;
+		end
 	end
 	
 	always @(*) begin
 		state_ = state;
 		xyzero = 0;
 		xyinc = 0;
+		rden = 0;
+		outdatr_ = 0;
 		case(state)
 		SKIP: begin
-			xyzero = 0;
+			xyzero = 1;
 			if(!empty)
-				if(oppux0 == 0 && oppuy0 == 0)
+				if(ppux0 == 0 && ppuy0 == 0)
 					state_ = OUT;
 				else
-					do = 1;
+					rden = 1;
 		end
-		OUT:
-			if(ox < 96 || ox >= 544 || oy[0])
-				outdat = 0;
-			else begin
+		OUT: begin
+			if(ox >= 48 && ox < 432 && !oy[0])
 				case(rem)
-				0: outdat = {opix0, opix0[7:0]};
+				0: outdatr_ = {pix0[23:16], pix0[7:0], pix0[15:8], pix0[23:16]};
 				1: begin
-					outdat = {opix0[15:0], opix[23:8]};
-					do = 1;
+					outdatr_ = {pix[15:8], pix[23:16], pix0[7:0], pix0[15:8]};
+					rden = consume;
 				end
 				2: begin
-					outdat = {opix0[7:0], opix0};
-					do = 1;
+					outdatr_ = {pix0[7:0], pix0[15:8], pix0[23:16], pix0[7:0]};
+					rden = consume;
 				end
 				endcase
 			xyinc = consume;
+		end
 		endcase
 		if(restart)
 			state_ = SKIP;

@@ -260,7 +260,6 @@ module dpsrc(
 				state <= HORDATA;
 			end
 		VERBLANK0: begin
-			restart <= 1;
 			ctr <= ctr + 1;
 			case(ctr)
 			0: begin
@@ -268,6 +267,7 @@ module dpsrc(
 				data[15:8] <= `symSS;
 				data[31:16] <= {Mvid[15:8], Mvid[23:16]};
 				isk <= 4'b0011;
+				restart <= 1;
 			end
 			1: data <= {vtot[15:8], htot[7:0], htot[15:8], Mvid[7:0]};
 			2: data <= {Mvid[23:16], hsync[7:0], hsync[15:8], vtot[7:0]};
@@ -326,7 +326,9 @@ module dpsrc(
 				y <= 0;
 			end
 		endcase
-		if(reset)
+		if(reset) begin
 			state <= IDLE;
+			tufreset <= 1;
+		end
 	end
 endmodule
