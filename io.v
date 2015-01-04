@@ -3,6 +3,7 @@
 module io(
 	input wire clk,
 	input wire tick,
+	output reg dmadone,
 	
 	input wire [4:0] memaddr,
 	output reg [7:0] iordata,
@@ -20,7 +21,9 @@ module io(
 	input wire dmaack,
 	
 	input wire [7:0] input0,
-	input wire [7:0] input1
+	input wire [7:0] input1,
+	
+	input wire reset
 );
 	
 	reg strobe;
@@ -28,6 +31,7 @@ module io(
 	reg startdma;
 	reg [7:0] startaddr;
 	reg [15:0] curaddr;
+	reg ioreq0;
 
 	always @(posedge clk) begin
 		if(strobe) begin
@@ -36,7 +40,8 @@ module io(
 		end
 		if(tick)
 			startdma <= 0;
-		if(ioreq && !ioack) begin
+		ioreq0 <= ioreq;
+		if(ioreq && !ioreq0) begin
 			ioack <= 1;
 			if(memwr)
 				case(memaddr)
@@ -88,6 +93,10 @@ module io(
 				dmawdata <= memrdata;
 			dmareq <= 0;
 		end
+		if(tick)
+			dmadone <= 0;
+		if(state == INIT && tick0 || dmaack || reset)
+			dmadone <= 1;
 	end
 	
 	always @(*) begin
@@ -124,6 +133,10 @@ module io(
 				state_ = DMAR;
 		end
 		endcase
+		if(reset) begin
+			state_ = IDLE;
+			dmawr = 0;
+		end
 	end
 			
 

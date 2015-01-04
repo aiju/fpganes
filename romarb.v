@@ -24,7 +24,7 @@ module romarb(
 	output reg [127:0] header
 );
 
-	reg incheadn, setheader;
+	reg incheadn, setheader, reset_;
 	reg [3:0] headn;
 	reg [2:0] state, state_;
 	reg [21:0] prgsize, chrsize, prgoff, chroff;
@@ -50,11 +50,12 @@ module romarb(
 			promdata <= romdata;
 		if(cromack_)
 			cromdata <= romdata;
+		reset <= reset_;
 	end
 	
 	always @(*) begin
 		state_ = state;
-		reset = 0;
+		reset_ = 0;
 		promack_ = 0;
 		cromack_ = 0;
 		romreq = 0;
@@ -69,39 +70,36 @@ module romarb(
 				state_ = CROM;
 		end
 		INIT: begin
-			reset = 1;
+			reset_ = 1;
 			romaddr = {18'd0, headn};
-			romreq = 1;
+			romreq = !init;
 			if(romack) begin
 				state_ = INITACK;
 				setheader = 1;
 			end
 		end
 		INITACK: begin
-			reset = 1;
+			reset_ = 1;
 			romaddr = {18'd0, headn};
-			romreq = 0;
-			if(!romack) begin
-				state_ = headn == 15 ? WAITTICK : INIT;
-				incheadn = 1;
-			end
+			state_ = headn == 15 ? WAITTICK : INIT;
+			incheadn = 1;
 		end
 		PROM: begin
-			romaddr = prgoff + {1'b0, promaddr} % prgsize;
+			romaddr = prgoff + {1'b0, promaddr};
 			romreq = promreq;
 			promack_ = romack;
 			if(!promreq && !romack)
 				state_ = IDLE;
 		end
 		CROM: begin
-			romaddr = chroff + {1'b0, cromaddr} % chrsize;
+			romaddr = chroff + {1'b0, cromaddr};
 			romreq = cromreq;
 			cromack_ = romack;
 			if(!cromreq && !romack)
 				state_ = IDLE;
 		end
 		WAITTICK: begin
-			reset = 1;
+			reset_ = 1;
 			if(cputick)
 				state_ = IDLE;
 		end
@@ -110,8 +108,8 @@ module romarb(
 	
 	always @(*) begin
 		prgoff = 16 | (header[50] ? 512 : 0);
-		prgsize = header[39:32] * 16384;
+		prgsize = {header[39:32], 14'd0};
 		chroff = prgoff + prgsize;
-		chrsize = header[47:40] * 8192;
+		chrsize = {1'd0, header[47:40], 13'd0};
 	end
 endmodule

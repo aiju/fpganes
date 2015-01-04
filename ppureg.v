@@ -40,6 +40,7 @@ module ppureg(
 	reg [2:0] smemaddr;
 	reg [7:0] smemwdata;
 	reg smemwr, smemrd, smemwlatch;
+	reg memreq0;
 	
 	reg [7:0] ppuwbuf;
 	reg w, w_;
@@ -50,7 +51,8 @@ module ppureg(
 			smemrd <= 0;
 			w <= w_;
 		end
-		if(memreq && !memack) begin
+		memreq0 <= memreq;
+		if(memreq && !memreq0) begin
 			smemwr <= memwr;
 			smemrd <= !memwr;
 			smemaddr <= memaddr;
@@ -71,8 +73,7 @@ module ppureg(
 				5, 6: w_ <= !w;
 				endcase
 			memack <= 1;
-		end
-		if(!memreq)
+		end else
 			memack <= 0;
 	end
 	

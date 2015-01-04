@@ -34,6 +34,7 @@ module ppubg(
 	output wire upalacc,
 	output wire [4:0] upaladdr,
 	
+	output reg ppudone,
 	input wire reset
 );
 
@@ -96,13 +97,16 @@ module ppubg(
 	reg [7:0] ntbyte, atbyte;
 	reg [15:0] nextbg;
 	reg [13:0] useraddr;
+	wire fetch;
 	reg fetchnt, fetchat, fetchlow, fetchhigh, fetchdata, bgshiftld;
 	reg userrd, userwr;
-	reg tick0;
+	reg tick0, tick1;
 	
+	assign fetch = fetchnt || fetchat || fetchlow || fetchhigh || fetchdata;
 	always @(posedge clk) begin
 		tick0 <= tick;
-		if((fetchnt || fetchat || fetchlow || fetchhigh || fetchdata) && tick0)
+		tick1 <= tick0;
+		if(fetch && tick0)
 			vmemreq <= 1;
 		if(tick && wr2007)
 			ppudata <= regwdata;
@@ -119,6 +123,13 @@ module ppubg(
 			if(fetchdata && !vmemwr)
 				ppudata <= vmemrdata;
 		end
+	end
+	
+	always @(posedge clk) begin
+		if(tick)
+			ppudone <= 0;
+		if(!fetch && tick1 || fetch && vmemack || reset)
+			ppudone <= 1;
 	end
 	
 	always @(*)

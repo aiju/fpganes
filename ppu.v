@@ -11,11 +11,11 @@ module ppu(
 	input wire memreq,
 	output wire memack,
 	
-	output wire [13:0] vmemaddr,
+	output reg [13:0] vmemaddr,
 	input wire [7:0] vmemrdata,
-	output wire [7:0] vmemwdata,
-	output wire vmemwr,
-	output wire vmemreq,
+	output reg [7:0] vmemwdata,
+	output reg vmemwr,
+	output reg vmemreq,
 	input wire vmemack,
 	
 	output wire [8:0] outx,
@@ -24,6 +24,7 @@ module ppu(
 	output reg [23:0] pix,
 	
 	output wire nmi,
+	output wire ppudone,
 	input wire reset
 );
 	
@@ -62,21 +63,29 @@ module ppu(
 	assign nmi = vbl && ppuctrl[7];
 	
 	wire wr2000, rd2002, wr2003, rd2004, wr2004, wr20051, wr20052, wr20061, wr20062, rd2007, wr2007, sprovf, spr0, left8, upalacc;
+	wire vmemreq_, vmemwr_;
 	reg render, spr00, spr0hit, spr0hit_;
 	wire [3:0] bgpix;
 	reg [3:0] bgpix0;
 	wire [4:0] sprpxout, upaladdr;
 	reg [4:0] sprpxout0;
-	wire [7:0] ppumask, ppuctrl, ppudata, regwdata, oamdata;
+	wire [7:0] ppumask, ppuctrl, ppudata, regwdata, oamdata, vmemwdata_;
 	reg [5:0] upaldata;
-	wire [13:0] sprvmemaddr;
+	wire [13:0] sprvmemaddr, vmemaddr_;
+	
+	always @(posedge clk) begin
+		vmemaddr <= vmemaddr_;
+		vmemwdata <= vmemwdata_;
+		vmemreq <= vmemreq_;
+		vmemwr <= vmemwr_;
+	end
 	
 	ppureg ppureg0(clk, tick, memaddr, ppurdata, memwdata, memwr, memreq, memack, ppuctrl, ppumask, vbl, spr0hit, sprovf, 
 		oamdata, ppudata, upalacc, upaldata, regwdata, wr2000, rd2002, wr2003, rd2004, wr2004, wr20051, wr20052, wr20061, wr20062, rd2007,
 		wr2007, reset);
-	ppubg ppubg0(clk, tick, vmemaddr, vmemrdata, vmemwdata, vmemwr, vmemreq, vmemack, ppux, ppuy, render, bgpix,
+	ppubg ppubg0(clk, tick, vmemaddr_, vmemrdata, vmemwdata_, vmemwr_, vmemreq_, vmemack, ppux, ppuy, render, bgpix,
 		ppuctrl, ppumask, regwdata, ppudata, wr2000, wr20051, wr20052, wr20061, wr20062, rd2007, wr2007,
-		sprvmemaddr, upalacc, upaladdr, reset);
+		sprvmemaddr, upalacc, upaladdr, ppudone, reset);
 	ppuspr ppuspr0(clk, tick, ppux, ppuy, render, ppuctrl, ppumask, regwdata, wr2003, rd2004, wr2004, oamdata, sprovf, sprvmemaddr,
 		vmemrdata, sprpxout, spr0, reset);
 	
@@ -123,12 +132,13 @@ module ppu(
 			pal[palwrap(upaladdr)] <= regwdata[5:0];
 		else
 			upaldata <= pal[palwrap(upaladdr)];
-		pix <= rgb[paldata];
+		if(tick)
+			pix <= rgb[paldata];
 	end
 	
 
 	assign outx = ppux - 4;
 	assign outy = ppuy;
-	assign pxvalid = tick && ppux >= 4 && ppux <= 260 && ppuy < 240;
+	assign pxvalid = tick && ppux >= 4 && ppux < 260 && ppuy < 240;
 	
 endmodule

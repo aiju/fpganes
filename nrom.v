@@ -39,7 +39,7 @@ module nrom(
 );
 
 	assign prgrdata = promdata;
-	assign promaddr = {6'd0, memaddr[14:0]};
+	assign promaddr = header[39:32] != 1 ? {6'd0, memaddr[14:0]} : {7'd0, memaddr[13:0]};
 	assign promreq = prgreq;
 	assign prgack = promack;
 	

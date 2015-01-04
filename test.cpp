@@ -38,6 +38,7 @@ main(int argc, char **argv)
 	int sz;
 	SDL_Event ev;
 	uint8_t k;
+	int romreq0, romctr;
 
 	if(SDL_Init(SDL_INIT_VIDEO) < 0){
 	error:
@@ -104,11 +105,12 @@ main(int argc, char **argv)
 		if((main_time % 10) == 6){
 			top->clk = 0;
 			top->input0 = k;
-			if(top->romreq){
+			top->romack = romctr > 0 && --romctr == 0;
+			if(top->romreq && !romreq0){
 				top->romdata = rom[top->romaddr];
-				top->romack = 1;
-			}else
-				top->romack = 0;
+				romctr = 2;
+			}
+			romreq0 = top->romreq;
 			if(top->pxvalid){
 				if(top->outx == 0)
 					SDL_UpdateRect(screen, 0, top->outy - 1, 640, top->outy);

@@ -12,7 +12,9 @@ module cpu(
 	input wire irq,
 	input wire nmi,
 	input wire halt,
-	input wire reset
+	input wire reset,
+	output reg cpudone,
+	output wire [94:0] cputrace
 );
 	
 	reg [15:0] pc, pc_, rAD, rAD_;
@@ -25,9 +27,10 @@ module cpu(
 	localparam FLAGV = 'h40;
 	localparam FLAGN = 'h80;
 	
-	reg [3:0] tr, t, t_;
-	wire [7:0] alua, alub;
-	reg [7:0] aluq;
+	reg [3:0] t, t_;
+	assign cputrace = {t, memwr, irq, nmi, op, rA, memwr ? memwdata : memrdata, memaddr, pc, rX, rY, rP, rS};
+	reg [7:0] alua, alub;
+	reg [7:0] aluq, aluq_;
 	
 	reg [3:0] aluas, alubs;
 	localparam AS0 = 0;
@@ -52,7 +55,7 @@ module cpu(
 	localparam ALUXOR = 6;
 	localparam ALUASL = 7;
 	localparam ALULSR = 8;
-	reg [7:0] aluflag, aluflagout, aluflagout0, clrflag, setflag, cpyflag;
+	reg [7:0] aluflag, aluflagout, aluflagout_, aluflagout0, clrflag, setflag, cpyflag;
 	reg [1:0] intrcause, intrcause_;
 	localparam INTRESET = 0;
 	localparam INTNMI = 1;
@@ -60,6 +63,7 @@ module cpu(
 	localparam INTIRQ = 3;
 	reg intr, nmi0, tick0, fetch, seta, setx, sety, sets, decs, setd, memsetd, setadl, setadh, memsetadl, memsetadh, zeroadh, setpc, setpcl, setpch, cin;
 	reg incpc;
+	reg memack0, memack1, memack2, reset0;
 	
 	reg [3:0] memsrc;
 	localparam MEMPC = 0;
@@ -77,7 +81,7 @@ module cpu(
 		if(tick && !halt) begin
 			pc <= pc_;
 			op <= op_;
-			tr <= t_;
+			t <= t_;
 			rA <= rA_;
 			rX <= rX_;
 			rY <= rY_;
@@ -89,13 +93,29 @@ module cpu(
 				nmi0 <= nmi;
 			intrcause <= intrcause_;
 			aluflagout0 <= aluflagout;
+			reset0 <= reset;
+		 end
+		 if(reset) begin
+		 	op <= 0;
+		 	t <= 0;
 		 end
 		 tick0 <= tick;
-		 if(tick0 && !halt)
+		 if(tick0 && !halt && !reset)
 		 	memreq <= 1;
 		 if(memack)
 		 	memreq <= 0;
 	end
+	
+	always @(posedge clk) begin
+		memack0 <= tick ? 0 : memack;
+		memack1 <= tick ? 0 : memack0;
+		memack2 <= tick ? 0 : memack1;
+		if(tick)
+			cpudone <= 0;
+		if(memack2 || reset)
+			cpudone <= 1;
+	end
+	
 	initial begin
 		rA = 0;
 		rX = 0;
@@ -114,9 +134,19 @@ module cpu(
 		rD_ = setd ? aluq : memsetd ? memrdata : rD;
 		rAD_[7:0] = memsetadl ? memrdata : setadl ? aluq : rAD[7:0];
 		rAD_[15:8] = zeroadh ? 0 : memsetadh ? memrdata : setadh ? aluq : rAD[15:8];
-		intr = reset || nmi && !nmi0 || irq && (rP & FLAGI) == 0;
+		intr = reset0 || nmi && !nmi0 || irq && (rP & FLAGI) == 0;
 		op_ = fetch ? intr ? 0 : memrdata : op;
-		intrcause_ = fetch ? intr ? reset ? INTRESET : nmi && !nmi0 ? INTNMI : INTIRQ : INTBRK : intrcause;
+		if(fetch)
+			if(reset0)
+				intrcause_ = INTRESET;
+			else if(nmi && !nmi0)
+				intrcause_ = INTNMI;
+			else if(irq && (rP & FLAGI) == 0)
+				intrcause_ = INTIRQ;
+			else
+				intrcause_ = INTBRK;
+		else
+			intrcause_ = intrcause;
 	end
 	
 	function [7:0] alumux;
@@ -140,26 +170,30 @@ module cpu(
 	end
 	endfunction
 
-	assign alua = alumux(aluas);
-	assign alub = alumux(alubs);
-	
+	always @(posedge clk) begin
+		alua <= alumux(aluas);
+		alub <= alumux(alubs);
+		aluq <= aluq_;
+		aluflagout <= aluflagout_;
+	end
+
 	always @(*) begin
-		aluflagout = 0;
+		aluflagout_ = 0;
 		case(aluop)
-		ALUNOPA: aluq = alua;
-		ALUNOPB: aluq = alub;
-		ALUADD: begin {aluflagout[0], aluq} = {1'b0, alua} + {1'b0, alub} + {8'd0, cin}; aluflagout[6] = ~(alua[7] ^ alub[7]) & (alua[7] ^ aluq[7]); end
-		ALUSUB: begin {aluflagout[0], aluq} = {1'b0, alua} + {1'b0, ~alub} + {8'd0, cin}; aluflagout[6] = (alua[7] ^ alub[7]) & (alua[7] ^ aluq[7]); end
-		ALUOR: aluq = alua | alub;
-		ALUAND: aluq = alua & alub;
-		ALUXOR: aluq = alua ^ alub;
-		ALUASL: {aluflagout[0], aluq} = {alua, cin};
-		ALULSR: {aluq, aluflagout[0]} = {cin, alua};
-		default: aluq = 8'hXX;
+		ALUNOPA: aluq_ = alua;
+		ALUNOPB: aluq_ = alub;
+		ALUADD: begin {aluflagout_[0], aluq_} = {1'b0, alua} + {1'b0, alub} + {8'd0, cin}; aluflagout_[6] = ~(alua[7] ^ alub[7]) & (alua[7] ^ aluq_[7]); end
+		ALUSUB: begin {aluflagout_[0], aluq_} = {1'b0, alua} + {1'b0, ~alub} + {8'd0, cin}; aluflagout_[6] = (alua[7] ^ alub[7]) & (alua[7] ^ aluq_[7]); end
+		ALUOR: aluq_ = alua | alub;
+		ALUAND: aluq_ = alua & alub;
+		ALUXOR: aluq_ = alua ^ alub;
+		ALUASL: {aluflagout_[0], aluq_} = {alua, cin};
+		ALULSR: {aluq_, aluflagout_[0]} = {cin, alua};
+		default: aluq_ = 8'hXX;
 		endcase
-		if(aluq == 0)
-			aluflagout = aluflagout | FLAGZ;
-		aluflagout[7] = aluq[7];
+		if(aluq_ == 0)
+			aluflagout_ = aluflagout_ | FLAGZ;
+		aluflagout_[7] = aluq_[7];
 	end
 	
 	assign memwdata = alua;
@@ -174,8 +208,6 @@ module cpu(
 		default: memaddr = 16'hXXXX;
 		endcase
 	end
-	
-	always @(*) t = reset ? 0 : tr;
 	
 	always @(*) begin
 		t_ = t + 1;
@@ -335,5 +367,7 @@ module cpu(
 		'hF81: begin setflag = FLAGD; t_ = 0; end
 		'hEA1: begin t_ = 0; end
 		endcase
+		if(reset)
+			memwr = 0;
 	end
 endmodule

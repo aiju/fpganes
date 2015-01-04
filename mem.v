@@ -3,11 +3,14 @@
 module mem(
 	input wire clk,
 	input wire halt,
+	input wire cpudone,
+	input wire dmadone,
+	output wire memdone,
 	
-	output wire [15:0] memaddr,
+	output reg [15:0] memaddr,
 	output reg [7:0] memrdata,
-	output wire [7:0] memwdata,
-	output wire memwr,
+	output reg [7:0] memwdata,
+	output reg memwr,
 	
 	input wire [15:0] cpuaddr,
 	input wire [7:0] cpuwdata,
@@ -22,7 +25,7 @@ module mem(
 	output reg dmaack,
 	
 	input wire [13:0] vmemaddr,
-	output reg [7:0] vmemrdata,
+	output reg [7:0] vmemrdata_,
 	input wire [7:0] vmemwdata,
 	input wire vmemwr,
 	input wire vmemreq,
@@ -54,15 +57,18 @@ module mem(
 	input wire [2:0] mirr
 );
 	reg memreq, memack;
+	reg [7:0] memrdata_;
 	
-	always @(*) begin
-		memreq = halt ? dmareq : cpureq;
-		cpuack = halt ? 0 : memack;
-		dmaack = halt ? memack : 0;
+	always @(posedge clk) begin
+		memrdata <= memrdata_;
+		cpuack <= halt ? 0 : memack;
+		dmaack <= halt ? memack : 0;
+		memreq <= halt ? dmareq : cpureq;
+		memaddr <= halt ? dmaaddr : cpuaddr;
+		memwdata <= halt ? dmawdata : cpuwdata;
+		memwr <= halt ? dmawr : cpuwr;
 	end
-	assign memaddr = halt ? dmaaddr : cpuaddr;
-	assign memwdata = halt ? dmawdata : cpuwdata;
-	assign memwr = halt ? dmawr : cpuwr;
+	assign memdone = halt ? dmadone : cpudone;
 
 	reg wramreq, wramack, ntreq, ntack;
 	reg [7:0] wramdata, ntdata;
@@ -73,27 +79,27 @@ module mem(
 		prgreq = 0;
 		ioreq = 0;
 		memack = 0;
-		memrdata = 8'hxx;
+		memrdata_ = 8'hxx;
 		case(memaddr[15:13])
 		0: begin
 			wramreq = memreq;
 			memack = wramack;
-			memrdata = wramdata;
+			memrdata_ = wramdata;
 		end
 		1: begin
 			ppureq = memreq;
 			memack = ppuack;
-			memrdata = ppurdata;
+			memrdata_ = ppurdata;
 		end
 		default:
 			if(memaddr < 16'h4020) begin
 				ioreq = memreq;
 				memack = ioack;
-				memrdata = iordata;
+				memrdata_ = iordata;
 			end else begin
 				prgreq = memreq;
 				memack = prgack;
-				memrdata = prgrdata;
+				memrdata_ = prgrdata;
 			end
 		endcase
 	end
@@ -104,11 +110,11 @@ module mem(
 		if(vmemaddr[13]) begin
 			ntreq = vmemreq;
 			vmemack = ntack;
-			vmemrdata = ntdata;
+			vmemrdata_ = ntdata;
 		end else begin
 			chrreq = vmemreq;
 			vmemack = chrack;
-			vmemrdata = chrrdata;
+			vmemrdata_ = chrrdata;
 		end
 	end
 
@@ -117,8 +123,10 @@ module mem(
 	reg [7:0] chrram[0:8191];
 	reg [11:0] ntaddr;
 	
-	always @(posedge clk)
-		if(wramreq) begin
+	reg wramreq0;
+	always @(posedge clk) begin
+		wramreq0 <= wramreq;
+		if(wramreq && !wramreq0) begin
 			wramack <= 1;
 			if(memwr)
 				wram[memaddr[10:0]] <= memwdata;
@@ -126,6 +134,7 @@ module mem(
 				wramdata <= wram[memaddr[10:0]];
 		end else
 			wramack <= 0;
+	end
 	
 	always @(*)
 		case(mirr)
@@ -137,8 +146,10 @@ module mem(
 		default: ntaddr = 12'hxxx;
 		endcase
 
-	always @(posedge clk)
-		if(ntreq) begin
+	reg ntreq0, chrramreq0;
+	always @(posedge clk) begin
+		ntreq0 <= ntreq;
+		if(ntreq && !ntreq0) begin
 			ntack <= 1;
 			if(vmemwr)
 				nt[ntaddr] <= vmemwdata;
@@ -146,9 +157,11 @@ module mem(
 				ntdata <= nt[ntaddr];
 		end else
 			ntack <= 0;
+	end
 	
-	always @(posedge clk)
-		if(chrramreq) begin
+	always @(posedge clk) begin
+		chrramreq0 <= chrramreq;
+		if(chrramreq && !chrramreq0) begin
 			chrramack <= 1;
 			if(chrramwr)
 				chrram[chrramaddr] <= chrramwdata;
@@ -156,5 +169,6 @@ module mem(
 				chrramrdata <= chrram[chrramaddr];
 		end else
 			chrramack <= 0;
+	end
 	
 endmodule
