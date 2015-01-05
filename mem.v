@@ -108,7 +108,7 @@ module mem(
 		chrreq = 0;
 		ntreq = 0;
 		if(vmemaddr[13]) begin
-			ntreq = vmemreq;
+			ntreq = vmemreq && vmemaddr < 14'h3F00;
 			vmemack = ntack;
 			vmemrdata_ = ntdata;
 		end else begin

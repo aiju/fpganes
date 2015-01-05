@@ -48,7 +48,7 @@ main(int argc, char **argv)
 	screen = SDL_SetVideoMode(640, 480, 32, 0);
 	if(screen == NULL)
 		goto error;
-	f = fopen("smb.nes", "rb");
+	f = fopen("mm2.nes", "rb");
 	fseek(f, 0, SEEK_END);
 	sz = ftell(f);
 	fseek(f, 0, SEEK_SET);

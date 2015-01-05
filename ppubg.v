@@ -94,13 +94,14 @@ module ppubg(
 		end
 	end
 	
-	reg [7:0] ntbyte, atbyte;
+	reg [7:0] ntbyte;
 	reg [15:0] nextbg;
 	reg [13:0] useraddr;
 	wire fetch;
 	reg fetchnt, fetchat, fetchlow, fetchhigh, fetchdata, bgshiftld;
 	reg userrd, userwr;
 	reg tick0, tick1;
+	reg [1:0] nextpal;
 	
 	assign fetch = fetchnt || fetchat || fetchlow || fetchhigh || fetchdata;
 	always @(posedge clk) begin
@@ -115,7 +116,7 @@ module ppubg(
 			if(fetchnt)
 				ntbyte <= vmemrdata;
 			if(fetchat)
-				atbyte <= vmemrdata;
+				nextpal <= vmemrdata[{v[6], v[1], 1'b0} +: 2];
 			if(fetchlow)
 				{nextbg[14], nextbg[12], nextbg[10], nextbg[8], nextbg[6], nextbg[4], nextbg[2], nextbg[0]} <= vmemrdata;
 			if(fetchhigh)
@@ -194,7 +195,7 @@ module ppubg(
 	
 	reg [31:0] bgshift;
 	reg [15:0] palsh;
-	reg [1:0] nextpal;
+	reg [1:0] nextpal0;
 	
 	always @(posedge clk)
 		if(tick) begin
@@ -202,9 +203,10 @@ module ppubg(
 				bgshift <= {bgshift[29:0], 2'b00};
 			if(bgshiftld) begin
 				bgshift[15:0] <= nextbg;
-				nextpal <= atbyte[{v[6], v[1], 1'b0} +: 2];
+				
+				nextpal0 <= nextpal;
 			end
-			palsh <= {palsh[13:0], nextpal};
+			palsh <= {palsh[13:0], nextpal0};
 		end
 	
 	assign bgpix = {palsh[14 - 2 * x +: 2], bgshift[30 - 2 * x +: 2]};

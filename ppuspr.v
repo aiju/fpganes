@@ -262,11 +262,11 @@ module ppuspr(
 				sprvmemaddr_[13:4] = {1'b0, oamdata[0], oamdata[7:1], dy[3]};
 			else
 				sprvmemaddr_[13:4] = {1'b0, ppuctrl[`SPRTAB], oamdata};
-		if(flipvraddr)
+		if(flipvraddr) begin
 			if(ppuctrl[`SPR16])
-				sprvmemaddr_[4:1] = ~sprvmemaddr[4:1];
-			else
-				sprvmemaddr_[3:1] = ~sprvmemaddr[3:1];
+				sprvmemaddr_[4] = !sprvmemaddr[4];
+			sprvmemaddr_[2:0] = ~sprvmemaddr[2:0];
+		end
 	end
 	
 	always @(*) begin

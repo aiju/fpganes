@@ -20,7 +20,8 @@ module nes(
 	output wire [94:0] nestrace,
 	output wire cputick_,
 	output wire pputick_,
-	output wire halt
+	output wire halt,
+	output wire [7:0] mmcerr
 
 );
 	wire cputick, pputick, memwr, cpuwr, dmawr, vmemwr, vmemreq, vmemack, ppureq, ppuack, ioreq, ioack, prgreq, prgack;
@@ -45,8 +46,8 @@ module nes(
 		dmawr, dmareq, dmaack, input0, input1, reset);
 	ppu ppu0(clk, pputick, memaddr[2:0], ppurdata, memwdata, memwr, ppureq, ppuack, vmemaddr, vmemrdata, vmemwdata,
 		vmemwr, vmemreq, vmemack, outx, outy, pxvalid, pix, nmi, ppudone, reset);
-	nrom nrom0(clk, memaddr, prgrdata, memwdata, memwr, prgreq, prgack, vmemaddr, chrrdata, vmemwdata, vmemwr, chrreq, chrack,
+	mmc mmc0(clk, memaddr, prgrdata, memwdata, memwr, prgreq, prgack, vmemaddr, chrrdata, vmemwdata, vmemwr, chrreq, chrack,
 		promaddr, promdata, promreq, promack, cromaddr, cromdata, cromreq, cromack, chrramaddr, chrramrdata, chrramwdata,
-		chrramwr, chrramreq, chrramack, header, mirr);
+		chrramwr, chrramreq, chrramack, header, mirr, mmcerr);
 	romarb romarb0(clk, init, reset, cputick, promaddr, promdata, promreq, promack, cromaddr, cromdata, cromreq, cromack, romaddr, romdata, romreq, romack, header);
 endmodule

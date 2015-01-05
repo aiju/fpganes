@@ -2,6 +2,7 @@
 
 module nrom(
 	input wire clk,
+	input wire reset,
 	
 	input wire [15:0] memaddr,
 	output wire [7:0] prgrdata,
@@ -30,7 +31,7 @@ module nrom(
 	output wire [12:0] chrramaddr,
 	input wire [7:0] chrramrdata,
 	output wire [7:0] chrramwdata,
-	output wire chramwr,
+	output wire chrramwr,
 	output wire chrramreq,
 	input wire chrramack,
 	
@@ -49,8 +50,8 @@ module nrom(
 	assign cromaddr = {7'd0, vmemaddr};
 	assign chrramaddr = vmemaddr[12:0];
 	assign chrrdata = chrram ? chrramrdata : cromdata;
-	assign chrramwdata = memwdata;
-	assign chramwr = memwr;
+	assign chrramwdata = vmemwdata;
+	assign chrramwr = vmemwr;
 	assign chrramreq = chrram ? chrreq : 0;
 	assign cromreq = chrram ? 0 : chrreq;
 	assign chrack = chrram ? chrramack : cromack;
