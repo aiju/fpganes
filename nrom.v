@@ -3,6 +3,7 @@
 module nrom(
 	input wire clk,
 	input wire reset,
+	output wire irq,
 	
 	input wire [15:0] memaddr,
 	output wire [7:0] prgrdata,
@@ -55,6 +56,8 @@ module nrom(
 	assign chrramreq = chrram ? chrreq : 0;
 	assign cromreq = chrram ? 0 : chrreq;
 	assign chrack = chrram ? chrramack : cromack;
+	
+	assign irq = 0;
 	
 	always @(*)
 		case({header[51], header[48]})

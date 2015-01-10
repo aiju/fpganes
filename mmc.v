@@ -2,6 +2,8 @@
 
 module mmc(
 	input wire clk,
+	input wire reset,
+	output wire irq,
 	
 	input wire [15:0] memaddr,
 	output wire [7:0] prgrdata,
@@ -42,20 +44,22 @@ module mmc(
 	localparam NMMC = 3;
 	localparam MMCB = 2;
 	reg [MMCB-1:0] act;
-	wire [NMMC-1:0] aresetn, aprgack, achrack, apromreq, acromreq, achrramwr, achrramreq;
+	wire [NMMC-1:0] aresetn, aprgack, achrack, apromreq, acromreq, achrramwr, achrramreq, airq;
 	wire [7:0] aprgrdata[NMMC-1:0], achrrdata[NMMC-1:0], achrramwdata[NMMC-1:0];
 	wire [20:0] apromaddr[NMMC-1:0], acromaddr[NMMC-1:0];
 	wire [12:0] achrramaddr[NMMC-1:0];
 	wire [2:0] amirr[NMMC-1:0];
 
-`define MMC(name, n) name name``_i(clk, act != n, memaddr, aprgrdata[n], memwdata, memwr, prgreq, aprgack[n],\
+`define MMC(name, n) name name``_i(clk, reset || act != n, airq[n], memaddr, aprgrdata[n], memwdata, memwr, prgreq, aprgack[n],\
 	vmemaddr, achrrdata[n], vmemwdata, vmemwr, chrreq, achrack[n], apromaddr[n], promdata, apromreq[n], promack,\
 	acromaddr[n], cromdata, acromreq[n], cromack, achrramaddr[n], chrramrdata, achrramwdata[n], achrramwr[n], achrramreq[n],\
 	chrramack, header, amirr[n])
 	
 	`MMC(nrom, 0);
 	`MMC(mmc1, 1);
+	`MMC(mmc3, 2);
 	
+	assign irq = airq[act];
 	assign prgack = aprgack[act];
 	assign chrack = achrack[act];
 	assign promreq = apromreq[act];
@@ -78,6 +82,7 @@ module mmc(
 			mmctab[i] = -1;
 		mmctab[0] = 0;
 		mmctab[1] = 1;
+		mmctab[4] = 2;
 	end
 	
 	wire [7:0] mapper;

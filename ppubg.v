@@ -203,7 +203,6 @@ module ppubg(
 				bgshift <= {bgshift[29:0], 2'b00};
 			if(bgshiftld) begin
 				bgshift[15:0] <= nextbg;
-				
 				nextpal0 <= nextpal;
 			end
 			palsh <= {palsh[13:0], nextpal0};

@@ -64,11 +64,11 @@ module ppu(
 	
 	wire wr2000, rd2002, wr2003, rd2004, wr2004, wr20051, wr20052, wr20061, wr20062, rd2007, wr2007, sprovf, spr0, left8, upalacc;
 	wire vmemreq_, vmemwr_;
-	reg render, spr00, spr0hit, spr0hit_;
+	reg render, spr00, spr01, spr0hit, spr0hit_;
 	wire [3:0] bgpix;
 	reg [3:0] bgpix0;
 	wire [4:0] sprpxout, upaladdr;
-	reg [4:0] sprpxout0;
+	reg [4:0] sprpxout0, sprpxout1;
 	wire [7:0] ppumask, ppuctrl, ppudata, regwdata, oamdata, vmemwdata_;
 	reg [5:0] upaldata;
 	wire [13:0] sprvmemaddr, vmemaddr_;
@@ -94,7 +94,9 @@ module ppu(
 		if(tick) begin
 			bgpix0 <= ppumask[`SHOWBG] && (!left8 || ppumask[`BG8]) ? bgpix : 0;
 			sprpxout0 <= ppumask[`SHOWSPR] && (!left8 || ppumask[`SPR8]) ? sprpxout : 0;
+			sprpxout1 <= sprpxout0;
 			spr00 <= spr0;
+			spr01 <= spr00;
 			spr0hit <= spr0hit_;
 		end
 	
@@ -104,11 +106,11 @@ module ppu(
 		spr0hit_ = spr0hit;
 		if(ppux == 1 && ppuy == 261)
 			spr0hit_ = 0;
-		if(spr00 && bgpix0[1:0] != 0 && sprpxout0[1:0] != 0)
+		if(spr01 && bgpix0[1:0] != 0 && sprpxout1[1:0] != 0)
 			spr0hit_ = 1;
 		
-		usespr = sprpxout0[1:0] != 0 && (!sprpxout0[4] || bgpix0[1:0] == 0);
-		paladdr = {usespr, usespr ? sprpxout0[3:0] : bgpix0};
+		usespr = sprpxout1[1:0] != 0 && (!sprpxout1[4] || bgpix0[1:0] == 0);
+		paladdr = {usespr, usespr ? sprpxout1[3:0] : bgpix0};
 		if(paladdr[1:0] == 0)
 			paladdr = 0;
 	end
@@ -137,8 +139,8 @@ module ppu(
 	end
 	
 
-	assign outx = ppux - 4;
+	assign outx = ppux - 3;
 	assign outy = ppuy;
-	assign pxvalid = tick && ppux >= 4 && ppux < 260 && ppuy < 240;
+	assign pxvalid = tick && ppux >= 3 && ppux < 259 && ppuy < 240;
 	
 endmodule
