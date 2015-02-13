@@ -54,6 +54,13 @@ module mem(
 	input wire chrramreq,
 	output reg chrramack,
 	
+	input wire [14:0] prgramaddr,
+	output reg [7:0] prgramrdata,
+	input wire [7:0] prgramwdata,
+	input wire prgramwr,
+	input wire prgramreq,
+	output reg prgramack,
+	
 	input wire [2:0] mirr
 );
 	reg memreq, memack;
@@ -121,9 +128,10 @@ module mem(
 	reg [7:0] wram[0:2047];
 	reg [7:0] nt[0:4095];
 	reg [7:0] chrram[0:8191];
+	reg [7:0] prgram[0:8191];
 	reg [11:0] ntaddr;
 	
-	reg wramreq0;
+	reg wramreq0, prgramreq0;
 	always @(posedge clk) begin
 		wramreq0 <= wramreq;
 		if(wramreq && !wramreq0) begin
@@ -134,6 +142,17 @@ module mem(
 				wramdata <= wram[memaddr[10:0]];
 		end else
 			wramack <= 0;
+	end
+	always @(posedge clk) begin
+		prgramreq0 <= prgramreq;
+		if(prgramreq && !prgramreq0) begin
+			prgramack <= 1;
+			if(prgramwr)
+				prgram[prgramaddr[12:0]] <= prgramwdata;
+			else
+				prgramrdata <= prgram[prgramaddr[12:0]];
+		end else
+			prgramack <= 0;
 	end
 	
 	always @(*)

@@ -230,11 +230,8 @@ module ppuspr(
 				hflip <= oamdata[6];
 				vflip <= oamdata[7];
 			end
-			if(setx) begin
+			if(setx)
 				sprx[i] <= oamdata;
-				if(oamdata == 0 && state[i] == SPRWAIT)
-					state[i] <= SPRACT;
-			end
 			if(setlow && !hflip)
 				{sprsh[i][14], sprsh[i][12], sprsh[i][10], sprsh[i][8], sprsh[i][6], sprsh[i][4], sprsh[i][2], sprsh[i][0]} <= vmemrdata;
 			if(sethigh && !hflip)
@@ -255,11 +252,14 @@ module ppuspr(
 	
 	always @(*) begin
 		sprvmemaddr_ = sprvmemaddr;
-		if(sety)
+		if(sety) begin
 			sprvmemaddr_[3:0] = {1'b0, dy[2:0]};
+			if(ppuctrl[`SPR16])
+				sprvmemaddr_[4] = dy[3];
+		end
 		if(setvraddr)
 			if(ppuctrl[`SPR16])
-				sprvmemaddr_[13:4] = {1'b0, oamdata[0], oamdata[7:1], dy[3]};
+				sprvmemaddr_[13:5] = {1'b0, oamdata[0], oamdata[7:1]};
 			else
 				sprvmemaddr_[13:4] = {1'b0, ppuctrl[`SPRTAB], oamdata};
 		if(flipvraddr) begin

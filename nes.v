@@ -26,12 +26,13 @@ module nes(
 );
 	wire cputick, pputick, memwr, cpuwr, dmawr, vmemwr, vmemreq, vmemack, ppureq, ppuack, ioreq, ioack, prgreq, prgack;
 	wire chrreq, chrack, nmi, reset, promreq, promack, cromreq, cromack, chrramreq, chrramack, chrramwr, cpureq, dmareq;
-	wire cpuack, dmaack, romstall, cpudone, ppudone, memdone, dmadone, irq;
+	wire cpuack, dmaack, romstall, cpudone, ppudone, memdone, dmadone, irq, prgramreq, prgramack, prgramwr;
 	wire [2:0] mirr;
 	wire [7:0] memrdata, memwdata, vmemrdata, vmemwdata, ppurdata, iordata, prgrdata, chrrdata, promdata, cromdata;
-	wire [7:0] chrramrdata, chrramwdata, cpuwdata, dmawdata;
+	wire [7:0] chrramrdata, chrramwdata, cpuwdata, dmawdata, prgramrdata, prgramwdata;
 	wire [12:0] chrramaddr;
 	wire [13:0] vmemaddr;
+	wire [14:0] prgramaddr;
 	wire [15:0] memaddr, cpuaddr, dmaaddr;
 	wire [20:0] promaddr, cromaddr;
 	wire [127:0] header;
@@ -40,7 +41,7 @@ module nes(
 	mem mem0(clk, halt, cpudone, dmadone, memdone, memaddr, memrdata, memwdata, memwr, cpuaddr, cpuwdata, cpuwr, cpureq, cpuack,
 		dmaaddr, dmawdata, dmawr, dmareq, dmaack, vmemaddr, vmemrdata, vmemwdata, vmemwr, vmemreq, vmemack, ppurdata, ppureq, ppuack,
 		iordata, ioreq, ioack, prgrdata, prgreq, prgack, chrrdata, chrreq, chrack, chrramaddr, chrramrdata, chrramwdata, chrramwr,
-		chrramreq, chrramack, mirr);
+		chrramreq, chrramack, prgramaddr, prgramrdata, prgramwdata, prgramwr, prgramreq, prgramack, mirr);
 	cpu cpu0(clk, cputick, cpuaddr, memrdata, cpuwdata, cpuwr, cpureq, cpuack, irq, nmi, halt, reset, cpudone, nestrace);
 	io io0(clk, cputick, dmadone, memaddr[4:0], iordata, memwdata, memwr, ioreq, ioack, halt, dmaaddr, memrdata, dmawdata,
 		dmawr, dmareq, dmaack, input0, input1, reset);
@@ -48,6 +49,6 @@ module nes(
 		vmemwr, vmemreq, vmemack, outx, outy, pxvalid, pix, nmi, ppudone, reset);
 	mmc mmc0(clk, reset, irq, memaddr, prgrdata, memwdata, memwr, prgreq, prgack, vmemaddr, chrrdata, vmemwdata, vmemwr, chrreq, chrack,
 		promaddr, promdata, promreq, promack, cromaddr, cromdata, cromreq, cromack, chrramaddr, chrramrdata, chrramwdata,
-		chrramwr, chrramreq, chrramack, header, mirr, mmcerr);
+		chrramwr, chrramreq, chrramack, prgramaddr, prgramrdata, prgramwdata, prgramwr, prgramreq, prgramack, header, mirr, mmcerr);
 	romarb romarb0(clk, init, reset, cputick, promaddr, promdata, promreq, promack, cromaddr, cromdata, cromreq, cromack, romaddr, romdata, romreq, romack, header);
 endmodule

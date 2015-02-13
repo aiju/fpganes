@@ -143,7 +143,7 @@ module ppubg(
 			if(ppux >= 256 && ppux <= 320)
 				vmemaddr = {sprvmemaddr[13:4], fetchhigh, sprvmemaddr[2:0]};
 			else
-				vmemaddr = {1'b0, ppumask[`PATTAB], ntbyte, fetchhigh, v[14:12]};
+				vmemaddr = {1'b0, ppuctrl[`PATTAB], ntbyte, fetchhigh, v[14:12]};
 		fetchdata:
 			vmemaddr = useraddr;
 		default:

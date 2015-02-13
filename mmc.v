@@ -35,6 +35,13 @@ module mmc(
 	output wire chrramwr,
 	output wire chrramreq,
 	input wire chrramack,
+
+	output wire [14:0] prgramaddr,
+	input wire [7:0] prgramrdata,
+	output wire [7:0] prgramwdata,
+	output wire prgramwr,
+	output wire prgramreq,
+	input wire prgramack,
 	
 	input wire [127:0] header,
 	output wire [2:0] mirr,
@@ -44,16 +51,17 @@ module mmc(
 	localparam NMMC = 3;
 	localparam MMCB = 2;
 	reg [MMCB-1:0] act;
-	wire [NMMC-1:0] aresetn, aprgack, achrack, apromreq, acromreq, achrramwr, achrramreq, airq;
-	wire [7:0] aprgrdata[NMMC-1:0], achrrdata[NMMC-1:0], achrramwdata[NMMC-1:0];
+	wire [NMMC-1:0] aresetn, aprgack, achrack, apromreq, acromreq, achrramwr, achrramreq, airq, aprgramreq, aprgramwr;
+	wire [7:0] aprgrdata[NMMC-1:0], achrrdata[NMMC-1:0], achrramwdata[NMMC-1:0], aprgramwdata[NMMC-1:0];
 	wire [20:0] apromaddr[NMMC-1:0], acromaddr[NMMC-1:0];
 	wire [12:0] achrramaddr[NMMC-1:0];
+	wire [14:0] aprgramaddr[NMMC-1:0];
 	wire [2:0] amirr[NMMC-1:0];
 
 `define MMC(name, n) name name``_i(clk, reset || act != n, airq[n], memaddr, aprgrdata[n], memwdata, memwr, prgreq, aprgack[n],\
 	vmemaddr, achrrdata[n], vmemwdata, vmemwr, chrreq, achrack[n], apromaddr[n], promdata, apromreq[n], promack,\
 	acromaddr[n], cromdata, acromreq[n], cromack, achrramaddr[n], chrramrdata, achrramwdata[n], achrramwr[n], achrramreq[n],\
-	chrramack, header, amirr[n])
+	chrramack, aprgramaddr[n], prgramrdata, aprgramwdata[n], aprgramwr[n], aprgramreq[n], prgramack, header, amirr[n])
 	
 	`MMC(nrom, 0);
 	`MMC(mmc1, 1);
@@ -66,12 +74,16 @@ module mmc(
 	assign cromreq = acromreq[act];
 	assign chrramwr = achrramwr[act];
 	assign chrramreq = achrramreq[act];
+	assign prgramwr = aprgramwr[act];
+	assign prgramreq = aprgramreq[act];
 	assign prgrdata = aprgrdata[act];
 	assign chrrdata = achrrdata[act];
 	assign chrramwdata = achrramwdata[act];
 	assign promaddr = apromaddr[act];
 	assign cromaddr = acromaddr[act];
 	assign chrramaddr = achrramaddr[act];
+	assign prgramaddr = aprgramaddr[act];
+	assign prgramwdata = aprgramwdata[act];
 	assign mirr = amirr[act];
 	
 	reg [MMCB-1:0] mmctab[0:255];

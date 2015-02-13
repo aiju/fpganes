@@ -89,7 +89,7 @@ module ppu(
 	ppuspr ppuspr0(clk, tick, ppux, ppuy, render, ppuctrl, ppumask, regwdata, wr2003, rd2004, wr2004, oamdata, sprovf, sprvmemaddr,
 		vmemrdata, sprpxout, spr0, reset);
 	
-	assign left8 = ppux < 8;
+	assign left8 = ppux < 10;
 	always @(posedge clk)
 		if(tick) begin
 			bgpix0 <= ppumask[`SHOWBG] && (!left8 || ppumask[`BG8]) ? bgpix : 0;

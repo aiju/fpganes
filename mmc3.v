@@ -36,6 +36,13 @@ module mmc3(
 	output wire chrramreq,
 	input wire chrramack,
 	
+	output wire [14:0] prgramaddr,
+	input wire [7:0] prgramrdata,
+	output wire [7:0] prgramwdata,
+	output wire prgramwr,
+	output wire prgramreq,
+	input wire prgramack,
+	
 	input wire [127:0] header,
 	output wire [2:0] mirr
 );
@@ -97,9 +104,13 @@ module mmc3(
 			cromaddr[17:10] = {chrb[{2'd0, vmemaddr[11]}][7:1], vmemaddr[10]};
 	end
 	
-	assign prgrdata = promdata;
-	assign promreq = prgreq;
-	assign prgack = promack;
+	assign prgrdata = memaddr[15] ? promdata : prgramrdata;
+	assign promreq = memaddr[15] && prgreq;
+	assign prgack = memaddr[15] ? promack : prgramack;
+	assign prgramwr = memwr;
+	assign prgramwdata = memwdata;
+	assign prgramreq = !memaddr[15] && prgreq;
+	assign prgramaddr = {2'b00, memaddr[12:0]};
 	
 	wire chrram;
 	
@@ -114,7 +125,7 @@ module mmc3(
 	
 	assign mirr = mirrmode ? `MIRRHOR : `MIRRVER;
 	
-	reg a12, a120, chrreq0, reload, irqpend;
+	reg a12, a120, chrreq0, reload;
 	reg [7:0] scanline;
 	
 	always @(posedge clk) begin

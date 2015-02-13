@@ -36,13 +36,24 @@ module mmc1(
 	output wire chrramreq,
 	input wire chrramack,
 	
+	output wire [14:0] prgramaddr,
+	input wire [7:0] prgramrdata,
+	output wire [7:0] prgramwdata,
+	output wire prgramwr,
+	output wire prgramreq,
+	input wire prgramack,
+	
 	input wire [127:0] header,
 	output reg [2:0] mirr
 );
 
-	assign prgrdata = promdata;
-	assign promreq = prgreq;
-	assign prgack = promack;
+	assign prgrdata = memaddr[15] ? promdata : prgramrdata;
+	assign promreq = memaddr[15] && prgreq;
+	assign prgramreq = !memaddr[15] && prgreq;
+	assign prgramwr = memwr;
+	assign prgramwdata = memwdata;
+	assign prgack = memaddr[15] ? promack : prgramack;
+	assign prgramaddr = {2'b00, memaddr[12:0]};
 	
 	reg prgreq0;
 	reg [4:0] sr, sr_, ctrl, chr0, chr1, prg;
