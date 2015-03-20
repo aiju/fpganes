@@ -5,7 +5,10 @@ module top(
 	inout wire aux_n,
 	input wire [1:0] refclk,
 	output wire [3:0] tx,
-	output wire debug
+	output wire debug,
+	output wire snesctrlclk,
+	output wire snesctrllatch,
+	input wire snesctrldata
 );
 
 	wire clk, usrclk;
@@ -77,7 +80,7 @@ module top(
 	wire [23:0] pix;
 	wire pxvalid;
 	wire pputick_;
-	wire [7:0] input0, input1;
+	wire [7:0] input0r, input0c, input1;
 	
 	axi3 axi3_0(
 		clk,
@@ -166,7 +169,7 @@ module top(
 		outy,
 		pix,
 		pputick_,
-		input0,
+		input0r,
 		input1
 	);
 
@@ -178,6 +181,10 @@ module top(
 	wire romreq, romack;
 	wire stall, rden, empty;
 	
+	PULLUP p2(.O(snesctrldata));
+	snesctrl snesctrl0(clk, snesctrlclk, snesctrllatch, snesctrldata, outx == 0 && outy == 0, input0c);
+	wire [7:0] input0 = input0r | input0c;
+
 	nes nes_i(clk, !phyctl[29], romaddr, romdata, romreq, romack, outx, outy, pxvalid, pix, input0, input1, stall|debugstall, trace, cputick_, pputick_, halt);
 	romread romread_i(clk, !phyctl[29], romaddr, romdata, romreq, romack, dmastart, dmaend,
 		sgp0_arvalid, sgp0_arready, sgp0_araddr, sgp0_arburst, sgp0_arcache, sgp0_arid, sgp0_arlen, sgp0_arlock,
